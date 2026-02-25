@@ -1,0 +1,22 @@
+{
+  "projects": [
+    {
+      "title": "FoodShare Connect",
+      "description": "A web platform that matches surplus or near-expiry food donations with communities in need. Built with Flask, dynamic APIs, and automation tools to streamline donations, track deliveries, and provide actionable analytics.",
+      "tech_stack": ["Flask", "PostgreSQL", "Celery", "Docker"],
+      "screenshot": "img/FoodShare.png"
+    },
+    {
+      "title": "ARC Alphonetics Company Website",
+      "description": "Developed a responsive business website with integrated analytics and inquiry tracking. Utilized automation and Google Ads to increase online visibility and engagement.",
+      "tech_stack": ["Python", "APIs", "Zapier", "GA4"],
+      "screenshot": "img/WEBSITEARC.png"
+    },
+    {
+      "title": "Company APIs",
+      "description": "Designed and implemented company APIs to enable seamless data handling and automation,",
+      "tech_stack": ["JavaScript", "Chart.js", "BigQuery", "Looker"],
+      "screenshot": "img/api.jpg"
+    }
+  ]
+}

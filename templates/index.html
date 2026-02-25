@@ -1,0 +1,129 @@
+﻿{% extends 'base.html' %}
+
+{% block content %}
+<div class="page">
+  <header class="site-header">
+    <div class="logo">Dev<span>folio</span></div>
+    <div class="header-actions">
+      <nav class="nav">
+        <a href="#skills">Skills</a>
+        <a href="#projects">Projects</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle light and dark mode" title="Toggle light and dark mode">
+        <span id="themeIcon">&#9790;</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="hero-visual">
+      <div class="avatar-frame">
+        <img
+          id="profileImage"
+          src="{{ url_for('static', filename='img/profile-placeholder.svg') }}"
+          data-dark-src="{{ url_for('static', filename='img/DarkMode.jpeg') }}"
+          data-light-src="{{ url_for('static', filename='img/LightMode.jpeg') }}"
+          alt="Your profile"
+          loading="lazy"
+        />
+      </div>
+    </div>
+    <div class="hero-text">
+      <p class="eyebrow">Hello, I'm <span class="accent">Elijah James Cubing</span></p>
+      <h1 class="hero-title">
+        Software Developer &amp; API Specialist
+      </h1>
+      <p class="hero-subtitle">
+        I build fast, reliable web experiences and automation systems that cut manual work.
+      </p>
+      <div class="hero-actions">
+        <a class="btn primary" href="#projects">View Projects</a>
+        <a class="btn ghost" href="/static/data/Cubing_Resume.pdf" download>Download CV</a>
+        <a class="btn outline" href="https://mail.google.com/mail/?view=cm&fs=1&to=ejcubing@gmail.com&su=Portfolio%20Inquiry" target="_blank" rel="noopener noreferrer">Email Me</a>
+      </div>
+    </div>
+    <div class="hero-reserved" aria-hidden="true"></div>
+  </section>
+
+  <section class="skills" id="skills">
+    <div class="section-title">
+      <h2>Skills &amp; Focus</h2>
+      <p>Practical, business-ready engineering across web, APIs, and analytics.</p>
+    </div>
+    <div class="skills-grid">
+      <article class="skill-card reveal">
+        <h3>Web Development</h3>
+        <p>Responsive UI, clean architecture, accessibility, and performance-first delivery.</p>
+        <ul>
+          <li>Flask, HTML, CSS</li>
+          <li>JavaScript, Chart.js</li>
+          <li>SEO, Core Web Vitals</li>
+        </ul>
+      </article>
+      <article class="skill-card reveal">
+        <h3>APIs &amp; Automation</h3>
+        <p>System integrations, workflow automation, and reliable data pipelines.</p>
+        <ul>
+          <li>REST APIs, Python automation</li>
+          <li>ETL &amp; task orchestration</li>
+        </ul>
+      </article>
+      <article class="skill-card reveal">
+        <h3>Google Analytics &amp; Ads</h3>
+        <p>Insightful dashboards, tagging, and campaign analytics that drive decisions.</p>
+        <ul>
+          <li>Conversion tracking</li>
+          <li>Reporting automation</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section class="projects" id="projects">
+    <div class="section-title">
+      <h2>Projects</h2>
+      <p>Developed web apps, automation solutions, and AI-assisted tools using Python, Flask, APIs, and modern frontend technologies.</p>
+    </div>
+    <div id="projectsGrid" class="projects-grid"></div>
+  </section>
+
+  <section class="contact" id="contact">
+    <div class="section-title">
+      <h2>Let’s Build Something</h2>
+      <p>Open to opportunities: roles, contracts, or API consulting.</p>
+    </div>
+    <div class="contact-card reveal">
+      <div>
+        <h3>Contact</h3>
+        <p>Email: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=ejcubing@gmail.com" target="_blank" rel="noopener noreferrer">ejcubing@gmail.com</a></p>
+        <p>Location: Quezon City / Philippines </p>
+      </div>
+      <a class="btn primary" href="https://mail.google.com/mail/?view=cm&fs=1&to=ejcubing@gmail.com&su=New%20Project%20Inquiry" target="_blank" rel="noopener noreferrer">Start a Project</a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>© 2026. Built with Flask.</p>
+  </footer>
+</div>
+
+<div class="chatbot">
+  <button class="chatbot-toggle" id="chatbotToggle" aria-label="Open chat">
+    Chat
+  </button>
+  <div class="chatbot-panel" id="chatbotPanel" aria-hidden="true">
+    <div class="chatbot-header">
+      <h4>Portfolio Assistant</h4>
+      <button id="chatbotClose" aria-label="Close chat">×</button>
+    </div>
+    <div class="chatbot-messages" id="chatbotMessages">
+      <div class="message bot">Hi! Ask me about projects, technologies, or contact details.</div>
+    </div>
+    <form class="chatbot-input" id="chatbotForm">
+      <input type="text" id="chatbotField" placeholder="Ask something..." required />
+      <button type="submit">Send</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

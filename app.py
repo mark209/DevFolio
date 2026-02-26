@@ -39,7 +39,7 @@ def api_chat():
     responses = {
         "projects": "I build automation tools, dashboards, and full-stack web apps. Check out the Projects section for details.",
         "technologies": "My core stack is Python, Flask, JavaScript, HTML, CSS, and automation tooling with APIs.",
-        "contact": "You can reach me via the Email Me button or at yourname@example.com.",
+        "contact": "You can reach me via the Email Me button or at ejcubing@gmail.com",
     }
 
     if any(keyword in message for keyword in ["project", "portfolio", "work"]):

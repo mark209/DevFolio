@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from flask import Flask, jsonify, render_template, request
 
@@ -8,6 +9,14 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "static" / "data"
 
 app = Flask(__name__)
+
+PROFILE = {
+    "name": "Elijah James Cubing",
+    "role": "Software Developer & API Specialist",
+    "email": "ejcubing@gmail.com",
+    "location": "Quezon City, Philippines",
+    "intro": "I build fast, reliable web experiences and automation systems that cut manual work.",
+}
 
 
 def load_projects() -> list[dict]:
@@ -21,7 +30,12 @@ def load_projects() -> list[dict]:
 
 @app.get("/")
 def index():
-    return render_template("index.html")
+    return render_template(
+        "index.html",
+        profile=PROFILE,
+        current_year=datetime.now().year,
+        page_title=f"{PROFILE['name']} | Portfolio",
+    )
 
 
 @app.get("/api/projects")
@@ -39,7 +53,7 @@ def api_chat():
     responses = {
         "projects": "I build automation tools, dashboards, and full-stack web apps. Check out the Projects section for details.",
         "technologies": "My core stack is Python, Flask, JavaScript, HTML, CSS, and automation tooling with APIs.",
-        "contact": "You can reach me via the Email Me button or at ejcubing@gmail.com",
+        "contact": f"You can reach me via the Email Me button or at {PROFILE['email']}.",
     }
 
     if any(keyword in message for keyword in ["project", "portfolio", "work"]):

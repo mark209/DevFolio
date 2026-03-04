@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 160" role="img" aria-label="EJ logo">
+  <rect width="220" height="160" fill="none"/>
+  <g fill="#1f2933" transform="skewX(-12)">
+    <path d="M72 30h102l-8 22H92l-7 18h68l-8 22H78l-8 20h94l-9 24H38l42-106z"/>
+    <path d="M162 30h28l-32 82c-7 18-22 28-43 28h-24l9-24h18c8 0 14-4 17-12l27-74z"/>
+  </g>
+</svg>

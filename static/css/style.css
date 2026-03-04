@@ -90,15 +90,25 @@ a {
 }
 
 .logo-badge {
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
+  width: 52px;
+  height: 40px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
-  background: var(--accent);
-  color: #03121d;
-  font-weight: 700;
-  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  padding: 6px;
+}
+
+.logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: invert(1) brightness(1.9) contrast(0.9) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.18));
+}
+
+body[data-theme="light"] .logo-image {
+  filter: none;
 }
 
 .nav {
@@ -257,15 +267,32 @@ a {
   position: relative;
   width: min(92%, 430px);
   z-index: 2;
+  border-radius: 28px;
+  padding: 12px;
+  background: linear-gradient(165deg, rgba(77, 182, 255, 0.35), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 30px 50px rgba(0, 0, 0, 0.25);
+}
+
+.avatar-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.06);
+  filter: blur(8px);
+  pointer-events: none;
 }
 
 .avatar-wrap img {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-height: 560px;
   object-fit: contain;
-  border-radius: 20px;
+  border-radius: 22px;
   border: 1px solid var(--border);
-  box-shadow: 0 22px 44px var(--shadow);
+  box-shadow: 0 16px 36px var(--shadow);
 }
 
 .hero-tag {
@@ -311,7 +338,7 @@ a {
 }
 
 .service-strip p::after {
-  content: "✦";
+  content: "*";
   position: absolute;
   right: -8px;
   top: 0;

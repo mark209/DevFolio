@@ -3,7 +3,9 @@
 {% block content %}
 <div class="page">
   <header class="site-header reveal">
-    <div class="logo-badge">EJ</div>
+    <a href="#top" class="logo-badge" aria-label="Home">
+      <img src="{{ url_for('static', filename='img/logo-ej.svg') }}" alt="EJ logo" class="logo-image" />
+    </a>
     <nav class="nav">
       <a href="#top">Home</a>
       <a href="#skills">Services</a>

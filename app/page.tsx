@@ -3,15 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { type FormEvent, type MouseEvent, useEffect, useState } from "react";
+import { type FormEvent, type MouseEvent, useEffect, useMemo, useState } from "react";
 import { Preloader } from "@/components/Preloader";
 import { SceneBackground } from "@/components/SceneBackground";
-import { projects } from "@/lib/projects";
+import { projectCategories, projects, techStackGroups } from "@/lib/projects";
 
 const navItems = [
   { label: "About", href: "#about" },
-  { label: "Porfolio", href: "#portfolio" },
-    { label: "Contact", href: "#contact" }
+  { label: "Portfolio", href: "#portfolio" },
+  { label: "Contact", href: "#contact" }
 ];
 
 const socialLinks = [
@@ -20,13 +20,54 @@ const socialLinks = [
   { href: "https://www.linkedin.com/in/elijah-cubing", label: "LinkedIn", icon: "/icons/linkedin.svg" }
 ];
 
+function AnimatedMetric({ value, label, suffix = "" }: { value: number; label: string; suffix?: string }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let frame = 0;
+    const totalFrames = 42;
+    const interval = window.setInterval(() => {
+      frame += 1;
+      const progress = Math.min(frame / totalFrames, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.round(value * eased));
+
+      if (progress === 1) {
+        window.clearInterval(interval);
+      }
+    }, 24);
+
+    return () => window.clearInterval(interval);
+  }, [value]);
+
+  return (
+    <motion.article
+      className="hud-readout min-w-[130px] rounded-2xl px-4 py-3"
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.4 }}
+      transition={{ duration: 0.45 }}
+    >
+      <p className="font-heading text-2xl font-extrabold text-white">
+        {displayValue}
+        {suffix}
+      </p>
+      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/50">{label}</p>
+    </motion.article>
+  );
+}
+
 export default function HomePage() {
   const [bootChecked, setBootChecked] = useState(false);
   const [showPreloader, setShowPreloader] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [activePortfolioTab, setActivePortfolioTab] = useState<"projects" | "techstack">("projects");
+  const [activeProjectFilter, setActiveProjectFilter] = useState<(typeof projectCategories)[number]>("All");
+  const [activeTech, setActiveTech] = useState<string | null>(null);
   const [showAllProjects, setShowAllProjects] = useState(false);
   const [scrollDirection, setScrollDirection] = useState<"up" | "down">("down");
+  const [activeSection, setActiveSection] = useState("home");
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStatus, setFormStatus] = useState<"idle" | "success" | "error">("idle");
   const [formFeedback, setFormFeedback] = useState("");
@@ -38,6 +79,34 @@ export default function HomePage() {
     message: "",
     website: ""
   });
+
+  const uniqueTechnologies = useMemo(
+    () => Array.from(new Set(projects.flatMap((project) => project.technologies))).sort(),
+    []
+  );
+
+  const portfolioMetrics = useMemo(
+    () => [
+      { value: projects.length, label: "Projects", suffix: "+" },
+      { value: uniqueTechnologies.length, label: "Technologies", suffix: "+" },
+      { value: projects.filter((project) => project.status === "Live").length, label: "Live Builds" },
+      { value: projectCategories.length - 1, label: "Focus Areas" }
+    ],
+    [uniqueTechnologies.length]
+  );
+
+  const filteredProjects = useMemo(
+    () =>
+      activeProjectFilter === "All"
+        ? projects
+        : projects.filter((project) => project.category === activeProjectFilter),
+    [activeProjectFilter]
+  );
+
+  const activeTechProjects = useMemo(
+    () => (activeTech ? projects.filter((project) => project.technologies.includes(activeTech)) : []),
+    [activeTech]
+  );
 
   useEffect(() => {
     const seenPreloader = sessionStorage.getItem("portfolio_preloader_seen") === "1";
@@ -141,16 +210,45 @@ export default function HomePage() {
 
 
   useEffect(() => {
+    setShowAllProjects(false);
+  }, [activeProjectFilter]);
+
+  useEffect(() => {
     let lastY = window.scrollY;
 
     const onScroll = () => {
       const currentY = window.scrollY;
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
       setScrollDirection(currentY > lastY ? "down" : "up");
+      setScrollProgress(maxScroll > 0 ? currentY / maxScroll : 0);
       lastY = currentY;
     };
 
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const sections = ["home", "about", "portfolio", "contact"]
+      .map((id) => document.getElementById(id))
+      .filter(Boolean) as HTMLElement[];
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+        if (visible?.target.id) {
+          setActiveSection(visible.target.id);
+        }
+      },
+      { rootMargin: "-30% 0px -55% 0px", threshold: [0.12, 0.25, 0.5, 0.75] }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
   }, []);
   const handleNavClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (!href.startsWith("#")) {
@@ -174,17 +272,22 @@ export default function HomePage() {
     return null;
   }
 
-  const displayedProjects = showAllProjects ? projects : projects.slice(0, 3);
+  const displayedProjects = showAllProjects ? filteredProjects : filteredProjects.slice(0, 3);
+  const backgroundMode = activeSection === "portfolio" ? "wave" : "particles";
 
   return (
     <>
       {showPreloader && <Preloader onComplete={handlePreloaderComplete} />}
-      <SceneBackground mode="particles" />
+      <SceneBackground mode={backgroundMode} />
+      <motion.div
+        className="fixed left-0 top-0 z-40 h-[3px] origin-left bg-gradient-to-r from-cyan-300 via-white to-violet-300"
+        style={{ scaleX: scrollProgress }}
+      />
 
       <main className="relative z-10 min-h-screen overflow-hidden">
         <div className="ambient-grid pointer-events-none absolute inset-0 opacity-20" />
 
-        <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 pb-16 pt-8 sm:px-10 md:pt-10">
+        <section id="home" className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 pb-16 pt-8 sm:px-10 md:pt-10">
           <motion.header
             className="flex items-center justify-between"
             initial={{ opacity: 0, y: 20 }}
@@ -198,10 +301,18 @@ export default function HomePage() {
                   key={item.label}
                   href={item.href}
                   onClick={(event) => handleNavClick(event, item.href)}
-                  className="relative transition-colors hover:text-white"
-                  whileHover={{ scale: 1.05, textShadow: "0 0 12px rgba(123,102,255,0.8)" }}
+                  className={`relative transition-colors hover:text-white ${
+                    activeSection === item.href.slice(1) ? "text-white" : "text-white/70"
+                  }`}
+                  whileHover={{ scale: 1.05, textShadow: "0 0 14px rgba(255,255,255,0.6)" }}
                 >
                   {item.label}
+                  {activeSection === item.href.slice(1) && (
+                    <motion.span
+                      layoutId="activeNav"
+                      className="absolute -bottom-2 left-0 h-px w-full bg-white/80 shadow-[0_0_12px_rgba(255,255,255,0.7)]"
+                    />
+                  )}
                 </motion.a>
               ))}
             </nav>
@@ -231,19 +342,24 @@ export default function HomePage() {
                 systems.
               </p>
 
+              <div className="mt-6 flex flex-wrap gap-3 font-mono text-[11px] uppercase tracking-[0.2em] text-white/45">
+                <span className="hud-readout rounded-full px-3 py-2">System Ready</span>
+                <span className="hud-readout rounded-full px-3 py-2">Full Stack Developer</span>
+              </div>
+
               <div className="mt-10 flex flex-wrap gap-4">
                 <motion.a
                   href="#portfolio"
-                  className="rounded-full bg-white px-7 py-3 font-heading text-sm font-semibold text-black"
-                  whileHover={{ scale: 1.04, boxShadow: "0 0 26px rgba(255,255,255,0.35)" }}
+                  className="premium-button rounded-full bg-white px-7 py-3 font-heading text-sm font-semibold text-black transition"
+                  whileHover={{ scale: 1.04, boxShadow: "0 0 30px rgba(255,255,255,0.32), 0 10px 24px rgba(0,0,0,0.35)" }}
                   whileTap={{ scale: 0.98 }}
                 >
                   View Projects
                 </motion.a>
                 <motion.a
                   href="#contact"
-                  className="rounded-full border border-white/25 bg-white/5 px-7 py-3 font-heading text-sm font-semibold text-white backdrop-blur-sm"
-                  whileHover={{ scale: 1.04, boxShadow: "0 0 26px rgba(59,165,255,0.25)" }}
+                  className="premium-button-ghost rounded-full bg-white/5 px-7 py-3 font-heading text-sm font-semibold text-white backdrop-blur-sm transition"
+                  whileHover={{ scale: 1.04, boxShadow: "0 0 26px rgba(255,255,255,0.18), 0 10px 24px rgba(0,0,0,0.35)" }}
                   whileTap={{ scale: 0.98 }}
                 >
                   Contact Me
@@ -258,7 +374,7 @@ export default function HomePage() {
                     target="_blank"
                     rel="noreferrer"
                     aria-label={social.label}
-                    className="rounded-full border border-white/20 bg-white/5 p-2.5 text-xs text-white/80 transition hover:border-white/40 hover:text-white"
+                    className="rounded-full border border-white/20 bg-white/5 p-2.5 text-xs text-white/80 shadow-[0_0_0_1px_rgba(255,255,255,0.05)] transition hover:border-white/45 hover:text-white hover:shadow-[0_0_22px_rgba(255,255,255,0.22)]"
                   >
                     <Image
                       src={social.icon}
@@ -271,6 +387,12 @@ export default function HomePage() {
                 ))}
               </div>
 
+              <div className="mt-9 grid grid-cols-2 gap-5 sm:flex sm:flex-wrap">
+                {portfolioMetrics.map((metric) => (
+                  <AnimatedMetric key={metric.label} {...metric} />
+                ))}
+              </div>
+
             </motion.div>
 
             <motion.div
@@ -279,20 +401,20 @@ export default function HomePage() {
               animate={loaded ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.95, delay: 0.45 }}
             >
-              <article className="relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] p-4 shadow-hero backdrop-blur-sm">
+              <article className="premium-panel relative overflow-hidden rounded-[28px] p-4 shadow-hero">
                 <div className="relative overflow-hidden rounded-2xl">
                   <Image
                     src="/Profile.jpg"
                     alt="Portrait hero image"
                     width={760}
                     height={980}
-                    className="h-[500px] w-full object-cover saturate-110"
+                    className="h-[500px] w-full object-cover saturate-110 contrast-[1.06]"
                     priority
                   />
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
                 </div>
 
-                <div className="absolute inset-x-8 bottom-8 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-md">
+                <div className="absolute inset-x-8 bottom-8 rounded-2xl border border-white/20 bg-white/10 p-4 shadow-[0_0_22px_rgba(255,255,255,0.1)] backdrop-blur-md">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-heading text-sm font-semibold text-white">@elijvvh_</p>
@@ -300,7 +422,7 @@ export default function HomePage() {
                     </div>
                     <a
                       href="#contact"
-                      className="rounded-xl border border-white/25 bg-black/35 px-3 py-2 text-xs font-semibold text-white transition hover:bg-black/55"
+                      className="rounded-xl border border-white/30 bg-black/35 px-3 py-2 text-xs font-semibold text-white shadow-[0_0_20px_rgba(255,255,255,0.08)] transition hover:border-white/50 hover:bg-black/55 hover:shadow-[0_0_28px_rgba(255,255,255,0.16)]"
                     >
                       Let&apos;s Talk
                     </a>
@@ -312,15 +434,16 @@ export default function HomePage() {
 
           <motion.section
             id="about"
-            className="mt-8 rounded-3xl border border-white/10 bg-white/[0.02] p-6 sm:p-8"
+            className="premium-panel hud-shell mt-8 rounded-3xl p-6 sm:p-8"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, amount: 0.25 }}
             transition={{ duration: scrollDirection === "down" ? 0.7 : 0 }}
           >
+            <div className="hud-corners" />
             <div className="grid items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
               <div className="mx-auto w-full max-w-sm">
-                <div className="relative aspect-[4/5] overflow-hidden rounded-[26px] border border-white/10 bg-white/[0.03] p-3 shadow-hero">
+                <div className="premium-panel relative aspect-[4/5] overflow-hidden rounded-[26px] p-3 shadow-hero transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_42px_rgba(0,0,0,0.45),0_0_30px_rgba(255,255,255,0.1)]">
                   <Image
                     src="/Profile2.jpg"
                     alt="Elijah James Cubing about portrait"
@@ -332,7 +455,7 @@ export default function HomePage() {
               </div>
 
               <div>
-                <p className="text-sm uppercase tracking-[0.34em] text-white/55">About Me</p>
+                <p className="hud-label">Profile Node</p>
                 <h2 className="mt-3 max-w-2xl font-heading text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
                   Full Stack Web Developer
                 </h2>
@@ -342,7 +465,7 @@ export default function HomePage() {
                   My work combines clean front-end execution with practical backend architecture to deliver fast, maintainable, and reliable applications that are built for long-term use, not just initial launch.
                 </p>
 
-                <div className="mt-6 max-w-xl rounded-2xl bg-white/[0.04] p-5 backdrop-blur-sm">
+                <div className="premium-panel mt-6 max-w-xl rounded-2xl p-5">
                   <p className="text-sm text-white/75">Curriculum Vitae</p>
                   <p className="mt-1 text-xs text-white/55">View or download my latest CV in PDF format.</p>
                   <div className="mt-4 flex flex-wrap gap-3">
@@ -350,14 +473,14 @@ export default function HomePage() {
                       href="/CUBING_Resume.pdf"
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex rounded-full bg-white px-5 py-2 text-xs font-semibold text-black transition hover:scale-[1.03]"
+                      className="premium-button inline-flex rounded-full bg-white px-5 py-2 text-xs font-semibold text-black transition hover:scale-[1.03] hover:shadow-[0_0_24px_rgba(255,255,255,0.26)]"
                     >
                       View CV
                     </a>
                     <a
-                      href="/Cubing_Resume.pdf"
-                      download="Cubing_Resume.pdf"
-                      className="inline-flex rounded-full border border-white/20 bg-white/5 px-5 py-2 text-xs font-semibold text-white transition hover:border-white/35"
+                      href="/CUBING_Resume.pdf"
+                      download="CUBING_Resume.pdf"
+                      className="premium-button-ghost inline-flex rounded-full bg-white/5 px-5 py-2 text-xs font-semibold text-white transition hover:border-white/45 hover:shadow-[0_0_24px_rgba(255,255,255,0.14)]"
                     >
                       Download CV
                     </a>
@@ -369,14 +492,15 @@ export default function HomePage() {
 
           <motion.section
             id="portfolio"
-            className="mt-8 rounded-3xl border border-white/10 bg-white/[0.02] p-6 sm:p-8"
+            className="premium-panel hud-shell mt-8 rounded-3xl p-6 sm:p-8"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, amount: 0.2 }}
             transition={{ duration: scrollDirection === "down" ? 0.7 : 0 }}
           >
+            <div className="hud-corners" />
             <div className="mx-auto max-w-3xl text-center">
-              <p className="text-sm uppercase tracking-[0.34em] text-white/55">Porfolio</p>
+              <p className="hud-label justify-center">Project Index</p>
               <h2 className="mt-3 font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">
                 Portfolio Showcase
               </h2>
@@ -386,13 +510,19 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="mx-auto mt-8 flex max-w-4xl justify-center rounded-2xl border border-white/10 bg-white/[0.03] p-2">
+            <div className="premium-panel relative mx-auto mt-8 flex max-w-4xl justify-center rounded-2xl p-2">
+              <motion.span
+                aria-hidden="true"
+                className="absolute left-2 top-2 h-[calc(100%-1rem)] w-[calc(50%-0.5rem)] rounded-xl border border-white/25 bg-white/12 shadow-[0_0_28px_rgba(255,255,255,0.18)]"
+                animate={{ x: activePortfolioTab === "projects" ? "0%" : "100%" }}
+                transition={{ type: "spring", stiffness: 260, damping: 30, mass: 0.9 }}
+              />
               <button
                 type="button"
                 onClick={() => setActivePortfolioTab("projects")}
-                className={`w-full rounded-xl px-4 py-3 text-center text-sm font-semibold transition sm:w-1/2 ${
+                className={`relative z-10 w-full rounded-xl px-4 py-3 text-center text-sm font-semibold transition-colors sm:w-1/2 ${
                   activePortfolioTab === "projects"
-                    ? "bg-white/10 text-white"
+                    ? "text-white"
                     : "text-white/65 hover:text-white"
                 }`}
               >
@@ -401,9 +531,9 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => setActivePortfolioTab("techstack")}
-                className={`w-full rounded-xl px-4 py-3 text-center text-sm font-semibold transition sm:w-1/2 ${
+                className={`relative z-10 w-full rounded-xl px-4 py-3 text-center text-sm font-semibold transition-colors sm:w-1/2 ${
                   activePortfolioTab === "techstack"
-                    ? "bg-white/10 text-white"
+                    ? "text-white"
                     : "text-white/65 hover:text-white"
                 }`}
               >
@@ -416,7 +546,30 @@ export default function HomePage() {
                 {activePortfolioTab === "projects" ? (
                   <>
                   <motion.div
-                    key="projects"
+                    key="project-filters"
+                    className="mb-6 flex flex-wrap items-center justify-center gap-2"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    {projectCategories.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => setActiveProjectFilter(category)}
+                        className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                          activeProjectFilter === category
+                            ? "border-white/55 bg-white text-black shadow-[0_0_24px_rgba(255,255,255,0.2)]"
+                            : "border-white/15 bg-white/[0.03] text-white/70 hover:border-white/35 hover:text-white"
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </motion.div>
+                  <motion.div
+                    key={`projects-${activeProjectFilter}`}
                     initial={{ opacity: 0, y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -14 }}
@@ -426,25 +579,42 @@ export default function HomePage() {
                     {displayedProjects.map((item) => (
                       <article
                         key={item.title}
-                        className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm"
+                        className="group premium-panel hud-shell overflow-hidden rounded-2xl transition duration-300 hover:-translate-y-1.5 hover:border-white/35 hover:shadow-[0_20px_36px_rgba(0,0,0,0.42),0_0_34px_rgba(255,255,255,0.16)]"
                       >
+                        <div className="hud-corners !inset-3" />
                         <div className="relative h-48 overflow-hidden">
                           <Image
                             src={item.image}
                             alt={item.title}
                             fill
                             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                            className="object-cover transition duration-500 group-hover:scale-105"
+                            className="object-cover transition duration-500 group-hover:scale-105 group-hover:brightness-110 group-hover:contrast-110"
                           />
                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
                         </div>
                         <div className="p-5">
+                          <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
+                            <span>{item.category}</span>
+                            <span className="h-1 w-1 rounded-full bg-white/35" />
+                            <span>{item.year}</span>
+                            <span className="h-1 w-1 rounded-full bg-white/35" />
+                            <span>{item.status}</span>
+                          </div>
+                          <div className="mb-3 h-1 overflow-hidden rounded-full bg-white/10">
+                            <motion.div
+                              className="h-full rounded-full bg-gradient-to-r from-cyan-200 to-white"
+                              initial={{ width: "20%" }}
+                              whileInView={{ width: item.status === "Live" ? "100%" : "72%" }}
+                              viewport={{ once: true, amount: 0.5 }}
+                              transition={{ duration: 0.8, ease: "easeOut" }}
+                            />
+                          </div>
                           <h3 className="font-heading text-lg font-semibold text-white">{item.title}</h3>
                           <p className="mt-2 text-sm leading-relaxed text-white/65">{item.summary}</p>
                           <Link
                             prefetch
                             href={`/projects/${item.slug}`}
-                            className="mt-4 inline-flex rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40"
+                            className="premium-button-ghost mt-4 inline-flex rounded-full px-4 py-2 text-xs font-semibold text-white transition hover:border-white/45 hover:shadow-[0_0_24px_rgba(255,255,255,0.18)]"
                           >
                             View Details
                           </Link>
@@ -452,12 +622,12 @@ export default function HomePage() {
                       </article>
                     ))}
                   </motion.div>
-                  {projects.length > 3 && (
+                  {filteredProjects.length > 3 && (
                     <div className="mt-5 flex justify-center">
                       <button
                         type="button"
                         onClick={() => setShowAllProjects((prev) => !prev)}
-                        className="rounded-full border border-white/20 bg-white/[0.03] px-5 py-2 text-xs font-semibold text-white transition hover:border-white/40"
+                        className="premium-button-ghost rounded-full bg-white/[0.03] px-5 py-2 text-xs font-semibold text-white transition hover:border-white/45 hover:shadow-[0_0_24px_rgba(255,255,255,0.18)]"
                       >
                         {showAllProjects ? "See Less" : "See More"}
                       </button>
@@ -471,75 +641,85 @@ export default function HomePage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -14 }}
                     transition={{ duration: 0.35 }}
-                    className="grid gap-5 md:grid-cols-2 xl:grid-cols-4"
+                    className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]"
                   >
-                    <article className="rounded-2xl border border-cyan-300/20 bg-gradient-to-b from-cyan-400/10 to-transparent p-5 backdrop-blur-sm">
-                      <h3 className="font-heading text-base font-semibold text-white">Languages</h3>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {[
-                          { label: "Python", icon: "/icons/tech/python.svg" },
-                          { label: "JavaScript", icon: "/icons/tech/javascript.svg" },
-                          { label: "HTML", icon: "/icons/tech/html.svg" },
-                          { label: "CSS", icon: "/icons/tech/css3.svg" }
-                        ].map((item) => (
-                          <span
-                            key={item.label}
-                            className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs text-white/90"
-                          >
-                            <Image
-                              src={item.icon}
-                              alt={item.label}
-                              width={14}
-                              height={14}
-                              className="opacity-95 brightness-0 invert"
-                            />
-                            {item.label}
-                          </span>
-                        ))}
-                      </div>
-                    </article>
+                    <div className="grid gap-5 md:grid-cols-2">
+                      {techStackGroups.map((group) => (
+                        <article
+                          key={group.title}
+                          className="premium-panel hud-shell rounded-2xl p-5 transition duration-300 hover:-translate-y-1 hover:border-white/35 hover:shadow-[0_0_28px_rgba(255,255,255,0.12)]"
+                        >
+                          <div className="hud-corners !inset-3" />
+                          <h3 className="font-heading text-base font-semibold text-white">{group.title}</h3>
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {group.items.map((item) => {
+                              const matchCount = projects.filter((project) =>
+                                project.technologies.includes(item.label)
+                              ).length;
+                              const isActive = activeTech === item.label;
 
-                    <article className="rounded-2xl border border-violet-300/20 bg-gradient-to-b from-violet-400/10 to-transparent p-5 backdrop-blur-sm">
-                      <h3 className="font-heading text-base font-semibold text-white">Frontend & Backend</h3>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {["React", "Node.js", "FastAPI", "Flask"].map((item) => (
-                          <span
-                            key={item}
-                            className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/90"
-                          >
-                            {item}
-                          </span>
-                        ))}
-                      </div>
-                    </article>
+                              return (
+                                <button
+                                  key={item.label}
+                                  type="button"
+                                  onClick={() => setActiveTech(isActive ? null : item.label)}
+                                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
+                                    isActive
+                                      ? "border-white/55 bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                                      : "border-white/20 bg-white/10 text-white/90 hover:border-white/40 hover:bg-white/15"
+                                  }`}
+                                  title={`${matchCount} listed project${matchCount === 1 ? "" : "s"}`}
+                                >
+                                  {"icon" in item && item.icon && (
+                                    <Image
+                                      src={item.icon}
+                                      alt={item.label}
+                                      width={14}
+                                      height={14}
+                                      className={isActive ? "" : "opacity-95 brightness-0 invert"}
+                                    />
+                                  )}
+                                  {item.label}
+                                  <span className={isActive ? "text-black/55" : "text-white/45"}>{matchCount}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
 
-                    <article className="rounded-2xl border border-emerald-300/20 bg-gradient-to-b from-emerald-400/10 to-transparent p-5 backdrop-blur-sm">
-                      <h3 className="font-heading text-base font-semibold text-white">APIs & Databases</h3>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {["REST APIs", "PostgreSQL", "MySQL", "Supabase"].map((item) => (
-                          <span
-                            key={item}
-                            className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/90"
-                          >
-                            {item}
-                          </span>
-                        ))}
+                    <aside className="premium-panel hud-shell rounded-2xl p-5">
+                      <div className="hud-corners !inset-3" />
+                      <p className="text-xs uppercase tracking-[0.24em] text-white/45">Tech Usage</p>
+                      <h3 className="mt-2 font-heading text-xl font-semibold text-white">
+                        {activeTech ? activeTech : "Select a stack item"}
+                      </h3>
+                      <div className="mt-4 space-y-3">
+                        {activeTech ? (
+                          activeTechProjects.length > 0 ? (
+                            activeTechProjects.map((project) => (
+                              <Link
+                                key={project.slug}
+                                href={`/projects/${project.slug}`}
+                                className="block rounded-xl border border-white/10 bg-white/[0.03] p-3 transition hover:border-white/30 hover:bg-white/[0.06]"
+                              >
+                                <p className="text-sm font-semibold text-white">{project.title}</p>
+                                <p className="mt-1 text-xs text-white/55">{project.category} - {project.role}</p>
+                              </Link>
+                            ))
+                          ) : (
+                            <p className="text-sm leading-relaxed text-white/60">
+                              This tool is part of the wider stack, but it is not tied to a listed project yet.
+                            </p>
+                          )
+                        ) : (
+                          <p className="text-sm leading-relaxed text-white/60">
+                            Click any technology to see where it appears across the project work.
+                          </p>
+                        )}
                       </div>
-                    </article>
-
-                    <article className="rounded-2xl border border-amber-300/20 bg-gradient-to-b from-amber-400/10 to-transparent p-5 backdrop-blur-sm">
-                      <h3 className="font-heading text-base font-semibold text-white">Tools & Analytics</h3>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {["GitHub", "Postman", "Google Analytics"].map((item) => (
-                          <span
-                            key={item}
-                            className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/90"
-                          >
-                            {item}
-                          </span>
-                        ))}
-                      </div>
-                    </article>
+                    </aside>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -548,16 +728,17 @@ export default function HomePage() {
 
           <motion.section
             id="contact"
-            className="mt-8 rounded-3xl border border-white/10 bg-white/[0.02] p-6 sm:p-8"
+            className="premium-panel hud-shell mt-8 rounded-3xl p-6 sm:p-8"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, amount: 0.2 }}
             transition={{ duration: scrollDirection === "down" ? 0.7 : 0 }}
           >
+            <div className="hud-corners" />
             <div className="grid items-start gap-8 lg:grid-cols-[0.95fr_1.05fr]">
               <div className="space-y-6">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.34em] text-white/55">Contact</p>
+                  <p className="hud-label">Contact Channel</p>
                   <h2 className="mt-3 font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">
                     Let&apos;s work together!
                   </h2>
@@ -583,11 +764,11 @@ export default function HomePage() {
                     <a
                       key={`contact-${social.label}`}
                       href={social.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={social.label}
-                      className="rounded-full border border-white/20 bg-white/[0.03] p-2.5 text-xs font-semibold text-white/80 transition hover:border-white/35 hover:text-white"
-                    >
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={social.label}
+                    className="rounded-full border border-white/20 bg-white/[0.03] p-2.5 text-xs font-semibold text-white/80 shadow-[0_0_0_1px_rgba(255,255,255,0.05)] transition hover:border-white/45 hover:text-white hover:shadow-[0_0_22px_rgba(255,255,255,0.2)]"
+                  >
                       <Image
                         src={social.icon}
                         alt={social.label}
@@ -602,7 +783,7 @@ export default function HomePage() {
 
               <form
                 onSubmit={handleSubmit}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm sm:p-6"
+                className="premium-panel rounded-2xl p-5 sm:p-6"
               >
                 <div className="space-y-4">
                   <input
@@ -620,7 +801,7 @@ export default function HomePage() {
                     value={formData.name}
                     onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
                     placeholder="Your Name"
-                    className="w-full rounded-xl border border-white/15 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition focus:border-white/30"
+                    className="premium-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition"
                   />
                   <input
                     type="email"
@@ -628,7 +809,7 @@ export default function HomePage() {
                     value={formData.email}
                     onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))}
                     placeholder="Your Email"
-                    className="w-full rounded-xl border border-white/15 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition focus:border-white/30"
+                    className="premium-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition"
                   />
                   <input
                     type="text"
@@ -636,7 +817,7 @@ export default function HomePage() {
                     value={formData.subject}
                     onChange={(event) => setFormData((prev) => ({ ...prev, subject: event.target.value }))}
                     placeholder="Subject"
-                    className="w-full rounded-xl border border-white/15 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition focus:border-white/30"
+                    className="premium-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition"
                   />
                   <textarea
                     required
@@ -644,14 +825,14 @@ export default function HomePage() {
                     value={formData.message}
                     onChange={(event) => setFormData((prev) => ({ ...prev, message: event.target.value }))}
                     placeholder="Your Message"
-                    className="w-full resize-none rounded-xl border border-white/15 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition focus:border-white/30"
+                    className="premium-input w-full resize-none rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition"
                   />
 
                   <div className="flex flex-col items-start gap-3">
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="premium-button w-full rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black transition hover:scale-[1.01] hover:shadow-[0_0_30px_rgba(255,255,255,0.26)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isSubmitting ? "Sending..." : "Send Message"}
                     </button>

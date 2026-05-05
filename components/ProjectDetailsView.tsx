@@ -10,6 +10,9 @@ type ProjectDetailsViewProps = {
 };
 
 export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
+  const hasLiveDemo = project.liveDemoUrl && project.liveDemoUrl !== "#";
+  const hasGithub = project.githubUrl && project.githubUrl !== "#";
+
   return (
     <main className="relative min-h-screen overflow-hidden px-6 pb-16 pt-8 sm:px-10">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_10%,rgba(59,130,246,0.18),transparent_44%),radial-gradient(circle_at_85%_20%,rgba(139,92,246,0.14),transparent_38%)]" />
@@ -39,9 +42,17 @@ export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.05 }}
           >
+            <p className="hud-label">Case File</p>
             <h1 className="max-w-3xl font-heading text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">
               {project.title}
             </h1>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/55">
+              {[project.category, project.role, project.year, project.status].map((item) => (
+                <span key={item} className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1">
+                  {item}
+                </span>
+              ))}
+            </div>
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-white/70 sm:text-lg">{project.description}</p>
           </motion.div>
 
@@ -49,8 +60,9 @@ export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
             initial={{ opacity: 0, y: 38 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.65, delay: 0.1 }}
-            className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-3 shadow-hero backdrop-blur-sm"
+            className="premium-panel hud-shell overflow-hidden rounded-3xl p-3 shadow-hero"
           >
+            <div className="hud-corners" />
             <div className="relative overflow-hidden rounded-2xl">
               <Image src={project.detailImage} alt={project.title} width={1200} height={820} className="h-auto w-full object-cover" priority />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
@@ -66,25 +78,56 @@ export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
             transition={{ duration: 0.55 }}
           >
             <div className="grid gap-4 sm:grid-cols-2">
-              <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm">
+              <article className="hud-readout rounded-2xl p-4">
                 <p className="text-2xl font-bold text-white">{project.technologies.length}</p>
                 <p className="mt-1 text-sm text-white/65">Total Technologies</p>
               </article>
-              <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm">
+              <article className="hud-readout rounded-2xl p-4">
                 <p className="text-2xl font-bold text-white">{project.features.length}</p>
                 <p className="mt-1 text-sm text-white/65">Key Features</p>
               </article>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
-              <a
-                href={project.liveDemoUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:scale-[1.02]"
-              >
-                Live Demo
-              </a>
+              {hasLiveDemo ? (
+                <a
+                  href={project.liveDemoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:scale-[1.02]"
+                >
+                  Live Demo
+                </a>
+              ) : (
+                <span className="rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-white/45">
+                  Demo unavailable
+                </span>
+              )}
+              {hasGithub && (
+                <a
+                  href={project.githubUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl border border-white/15 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-white transition hover:border-white/35"
+                >
+                  GitHub
+                </a>
+              )}
+            </div>
+
+            <div className="mt-7">
+              <h2 className="font-heading text-xl font-semibold text-white">Project Outcomes</h2>
+              <div className="mt-4 space-y-3">
+                {project.outcomes.map((outcome) => (
+                  <motion.div
+                    key={outcome}
+                    whileHover={{ x: 5, backgroundColor: "rgba(255,255,255,0.07)" }}
+                  className="hud-readout rounded-xl px-4 py-3 text-sm text-white/72"
+                  >
+                    {outcome}
+                  </motion.div>
+                ))}
+              </div>
             </div>
 
             <div className="mt-7">
@@ -104,8 +147,9 @@ export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, amount: 0.2 }}
             transition={{ duration: 0.55, delay: 0.08 }}
-            className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm"
+            className="premium-panel hud-shell rounded-2xl p-6"
           >
+            <div className="hud-corners !inset-3" />
             <h2 className="font-heading text-2xl font-semibold text-white">Key Features</h2>
             <ul className="mt-5 space-y-3">
               {project.features.map((feature) => (

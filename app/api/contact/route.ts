@@ -61,6 +61,36 @@ function normalizeSingleLine(input: string) {
   return input.replace(/[\r\n]/g, " ").trim();
 }
 
+function getSmtpErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "Unable to send message right now. Please try again shortly.";
+  }
+
+  const smtpError = error as Error & {
+    code?: string;
+    command?: string;
+    response?: string;
+    responseCode?: number;
+  };
+
+  if (smtpError.code === "EAUTH" || smtpError.responseCode === 535) {
+    return "Email authentication failed. Please check the SMTP username and app password.";
+  }
+
+  if (
+    smtpError.code === "ESOCKET" &&
+    /self-signed certificate/i.test(smtpError.message)
+  ) {
+    return "Email service TLS verification failed. For local development, set SMTP_ALLOW_SELF_SIGNED=true.";
+  }
+
+  if (smtpError.code === "ECONNECTION" || smtpError.code === "ETIMEDOUT" || smtpError.code === "ESOCKET") {
+    return "Email service connection failed. Please check SMTP_HOST, SMTP_PORT, and network access.";
+  }
+
+  return "Unable to send message right now. Please try again shortly.";
+}
+
 export async function POST(request: Request) {
   try {
     const now = Date.now();
@@ -119,6 +149,10 @@ export async function POST(request: Request) {
     const smtpPort = Number(process.env.SMTP_PORT);
     const allowSelfSigned = process.env.SMTP_ALLOW_SELF_SIGNED === "true";
 
+    if (!Number.isInteger(smtpPort) || smtpPort <= 0) {
+      return NextResponse.json({ error: "Email service is misconfigured." }, { status: 500 });
+    }
+
     if (allowSelfSigned && process.env.NODE_ENV === "production") {
       return NextResponse.json({ error: "Email service is misconfigured." }, { status: 500 });
     }
@@ -134,7 +168,10 @@ export async function POST(request: Request) {
       tls: {
         rejectUnauthorized: !allowSelfSigned,
         servername: smtpHost
-      }
+      },
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000
     });
 
     const recipient = process.env.CONTACT_TO ?? "ejcubing@gmail.com";
@@ -159,7 +196,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Contact SMTP send failed:", error);
     return NextResponse.json(
-      { error: "Unable to send message right now. Please try again shortly." },
+      { error: getSmtpErrorMessage(error) },
       { status: 500 }
     );
   }

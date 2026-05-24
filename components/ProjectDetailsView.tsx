@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { type Project } from "@/lib/projects";
 
 type ProjectDetailsViewProps = {
@@ -10,8 +10,17 @@ type ProjectDetailsViewProps = {
 };
 
 export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
+  const shouldReduceMotion = useReducedMotion();
   const hasLiveDemo = project.liveDemoUrl && project.liveDemoUrl !== "#";
   const hasGithub = project.githubUrl && project.githubUrl !== "#";
+  const sectionMotion = shouldReduceMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 26 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: { once: false, amount: 0.2 },
+        transition: { duration: 0.45 }
+      };
 
   return (
     <main className="relative min-h-screen overflow-hidden px-6 pb-16 pt-8 sm:px-10">
@@ -20,16 +29,16 @@ export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
 
       <section className="relative z-10 mx-auto w-full max-w-7xl">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.5 }}
           className="mb-8 flex flex-wrap items-center gap-3 text-sm text-white/65"
         >
           <Link
             href="/#portfolio"
             className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-white transition hover:border-white/25"
           >
-            Back
+            Back to Projects
           </Link>
           <span>Projects</span>
           <span className="text-white/30">/</span>
@@ -38,11 +47,11 @@ export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
 
         <div className="grid items-start gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <motion.div
-            initial={{ opacity: 0, y: 32 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.05 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.6, delay: shouldReduceMotion ? 0 : 0.05 }}
           >
-            <p className="hud-label">Case File</p>
+            <p className="hud-label">Case Study</p>
             <h1 className="max-w-3xl font-heading text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">
               {project.title}
             </h1>
@@ -57,10 +66,10 @@ export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 38 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 38 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65, delay: 0.1 }}
-            className="premium-panel hud-shell overflow-hidden rounded-3xl p-3 shadow-hero"
+            transition={{ duration: shouldReduceMotion ? 0 : 0.65, delay: shouldReduceMotion ? 0 : 0.1 }}
+            className="premium-panel content-panel hud-shell overflow-hidden rounded-3xl p-3 shadow-hero"
           >
             <div className="hud-corners" />
             <div className="relative overflow-hidden rounded-2xl">
@@ -70,25 +79,13 @@ export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
           </motion.div>
         </div>
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-2">
-          <motion.div
-            initial={{ opacity: 0, y: 26 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
-            transition={{ duration: 0.55 }}
+        <div className="mt-10 grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+          <motion.aside
+            {...sectionMotion}
+            className="premium-panel content-panel rounded-2xl p-5"
           >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <article className="hud-readout rounded-2xl p-4">
-                <p className="text-2xl font-bold text-white">{project.technologies.length}</p>
-                <p className="mt-1 text-sm text-white/65">Total Technologies</p>
-              </article>
-              <article className="hud-readout rounded-2xl p-4">
-                <p className="text-2xl font-bold text-white">{project.features.length}</p>
-                <p className="mt-1 text-sm text-white/65">Key Features</p>
-              </article>
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-3">
+            <h2 className="font-heading text-xl font-semibold text-white">Links</h2>
+            <div className="mt-4 flex flex-wrap gap-3">
               {hasLiveDemo ? (
                 <a
                   href={project.liveDemoUrl}
@@ -96,11 +93,11 @@ export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
                   rel="noreferrer"
                   className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:scale-[1.02]"
                 >
-                  Live Demo
+                  Open Live Site
                 </a>
               ) : (
                 <span className="rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-white/45">
-                  Demo unavailable
+                  Live site unavailable
                 </span>
               )}
               {hasGithub && (
@@ -110,19 +107,19 @@ export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
                   rel="noreferrer"
                   className="rounded-xl border border-white/15 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-white transition hover:border-white/35"
                 >
-                  GitHub
+                  View GitHub
                 </a>
               )}
             </div>
 
             <div className="mt-7">
-              <h2 className="font-heading text-xl font-semibold text-white">Project Outcomes</h2>
+              <h2 className="font-heading text-xl font-semibold text-white">Results / Impact</h2>
               <div className="mt-4 space-y-3">
-                {project.outcomes.map((outcome) => (
+                {project.impact.map((outcome) => (
                   <motion.div
                     key={outcome}
-                    whileHover={{ x: 5, backgroundColor: "rgba(255,255,255,0.07)" }}
-                  className="hud-readout rounded-xl px-4 py-3 text-sm text-white/72"
+                    whileHover={shouldReduceMotion ? undefined : { x: 5, backgroundColor: "rgba(255,255,255,0.07)" }}
+                    className="hud-readout rounded-xl px-4 py-3 text-sm text-white/72"
                   >
                     {outcome}
                   </motion.div>
@@ -140,30 +137,42 @@ export function ProjectDetailsView({ project }: ProjectDetailsViewProps) {
                 ))}
               </div>
             </div>
-          </motion.div>
+          </motion.aside>
 
-          <motion.article
-            initial={{ opacity: 0, y: 26 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
-            transition={{ duration: 0.55, delay: 0.08 }}
-            className="premium-panel hud-shell rounded-2xl p-6"
-          >
-            <div className="hud-corners !inset-3" />
-            <h2 className="font-heading text-2xl font-semibold text-white">Key Features</h2>
-            <ul className="mt-5 space-y-3">
-              {project.features.map((feature) => (
-                <motion.li
-                  key={feature}
-                  whileHover={{ x: 6, scale: 1.01, backgroundColor: "rgba(255,255,255,0.08)" }}
-                  transition={{ duration: 0.2 }}
-                  className="rounded-xl bg-white/[0.03] px-4 py-3 text-sm text-white/75"
-                >
-                  {feature}
-                </motion.li>
-              ))}
-            </ul>
-          </motion.article>
+          <motion.div {...sectionMotion} className="space-y-5">
+            {[
+              ["Problem", project.problem],
+              ["My Role", project.role],
+              ["Solution", project.solution]
+            ].map(([title, body]) => (
+              <article key={title} className="premium-panel content-panel rounded-2xl p-6">
+                <h2 className="font-heading text-xl font-semibold text-white">{title}</h2>
+                <p className="mt-3 text-sm leading-relaxed text-white/70">{body}</p>
+              </article>
+            ))}
+
+            <article className="premium-panel content-panel rounded-2xl p-6">
+              <h2 className="font-heading text-xl font-semibold text-white">Key Features</h2>
+              <ul className="mt-4 grid gap-3">
+                {project.features.map((feature) => (
+                  <li key={feature} className="rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm text-white/75">
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </article>
+
+            <article className="premium-panel content-panel rounded-2xl p-6">
+              <h2 className="font-heading text-xl font-semibold text-white">Technical Decisions</h2>
+              <ul className="mt-4 grid gap-3">
+                {project.technicalDecisions.map((decision) => (
+                  <li key={decision} className="rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm text-white/75">
+                    {decision}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </motion.div>
         </div>
       </section>
     </main>

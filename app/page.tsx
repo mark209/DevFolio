@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { type FormEvent, type MouseEvent, useEffect, useMemo, useState } from "react";
 import { Preloader } from "@/components/Preloader";
 import { SceneBackground } from "@/components/SceneBackground";
@@ -10,8 +10,9 @@ import { projectCategories, projects, techStackGroups } from "@/lib/projects";
 
 const navItems = [
   { label: "About", href: "#about" },
-  { label: "Portfolio", href: "#portfolio" },
-  { label: "Contact", href: "#contact" }
+  { label: "Projects", href: "#portfolio" },
+  { label: "Contact", href: "#contact" },
+  { label: "Resume", href: "/CUBING_Resume.pdf", external: true }
 ];
 
 const socialLinks = [
@@ -21,11 +22,17 @@ const socialLinks = [
 ];
 
 function AnimatedMetric({ value, label, suffix = "" }: { value: number; label: string; suffix?: string }) {
-  const [displayValue, setDisplayValue] = useState(0);
+  const shouldReduceMotion = useReducedMotion();
+  const [displayValue, setDisplayValue] = useState(shouldReduceMotion ? value : 0);
 
   useEffect(() => {
+    if (shouldReduceMotion) {
+      setDisplayValue(value);
+      return;
+    }
+
     let frame = 0;
-    const totalFrames = 42;
+    const totalFrames = 28;
     const interval = window.setInterval(() => {
       frame += 1;
       const progress = Math.min(frame / totalFrames, 1);
@@ -38,15 +45,15 @@ function AnimatedMetric({ value, label, suffix = "" }: { value: number; label: s
     }, 24);
 
     return () => window.clearInterval(interval);
-  }, [value]);
+  }, [shouldReduceMotion, value]);
 
   return (
     <motion.article
       className="hud-readout min-w-[130px] rounded-2xl px-4 py-3"
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+      whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.4 }}
-      transition={{ duration: 0.45 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.45 }}
     >
       <p className="font-heading text-2xl font-extrabold text-white">
         {displayValue}
@@ -58,9 +65,11 @@ function AnimatedMetric({ value, label, suffix = "" }: { value: number; label: s
 }
 
 export default function HomePage() {
+  const shouldReduceMotion = useReducedMotion();
   const [bootChecked, setBootChecked] = useState(false);
   const [showPreloader, setShowPreloader] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activePortfolioTab, setActivePortfolioTab] = useState<"projects" | "techstack">("projects");
   const [activeProjectFilter, setActiveProjectFilter] = useState<(typeof projectCategories)[number]>("All");
   const [activeTech, setActiveTech] = useState<string | null>(null);
@@ -109,6 +118,13 @@ export default function HomePage() {
   );
 
   useEffect(() => {
+    if (shouldReduceMotion) {
+      setLoaded(true);
+      setShowPreloader(false);
+      setBootChecked(true);
+      return;
+    }
+
     const seenPreloader = sessionStorage.getItem("portfolio_preloader_seen") === "1";
     if (seenPreloader) {
       setLoaded(true);
@@ -119,7 +135,7 @@ export default function HomePage() {
 
     setShowPreloader(true);
     setBootChecked(true);
-  }, []);
+  }, [shouldReduceMotion]);
 
   useEffect(() => {
     if (!loaded) {
@@ -137,11 +153,11 @@ export default function HomePage() {
     }
 
     const timer = setTimeout(() => {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      target.scrollIntoView({ behavior: shouldReduceMotion ? "auto" : "smooth", block: "start" });
     }, 80);
 
     return () => clearTimeout(timer);
-  }, [loaded]);
+  }, [loaded, shouldReduceMotion]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -174,7 +190,8 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    if (!loaded) {
+    if (!loaded || shouldReduceMotion) {
+      setScrambleText("Hello! I'm");
       return;
     }
 
@@ -206,12 +223,19 @@ export default function HomePage() {
     }, 70);
 
     return () => clearInterval(interval);
-  }, [loaded]);
+  }, [loaded, shouldReduceMotion]);
 
 
   useEffect(() => {
     setShowAllProjects(false);
   }, [activeProjectFilter]);
+
+  useEffect(() => {
+    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -252,13 +276,15 @@ export default function HomePage() {
   }, []);
   const handleNavClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (!href.startsWith("#")) {
+      setIsMobileMenuOpen(false);
       return;
     }
     event.preventDefault();
     const target = document.querySelector(href);
     if (target) {
       window.history.replaceState(null, "", href);
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      target.scrollIntoView({ behavior: shouldReduceMotion ? "auto" : "smooth", block: "start" });
+      setIsMobileMenuOpen(false);
     }
   };
 
@@ -274,11 +300,19 @@ export default function HomePage() {
 
   const displayedProjects = showAllProjects ? filteredProjects : filteredProjects.slice(0, 3);
   const backgroundMode = activeSection === "portfolio" ? "wave" : "particles";
+  const sectionMotion = shouldReduceMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 40 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: { once: false, amount: 0.2 },
+        transition: { duration: scrollDirection === "down" ? 0.55 : 0 }
+      };
 
   return (
     <>
       {showPreloader && <Preloader onComplete={handlePreloaderComplete} />}
-      <SceneBackground mode={backgroundMode} />
+      <SceneBackground mode={backgroundMode} reduceMotion={Boolean(shouldReduceMotion)} />
       <motion.div
         className="fixed left-0 top-0 z-40 h-[3px] origin-left bg-gradient-to-r from-cyan-300 via-white to-violet-300"
         style={{ scaleX: scrollProgress }}
@@ -289,10 +323,10 @@ export default function HomePage() {
 
         <section id="home" className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 pb-16 pt-8 sm:px-10 md:pt-10">
           <motion.header
-            className="flex items-center justify-between"
-            initial={{ opacity: 0, y: 20 }}
+            className="relative z-30 flex items-center justify-between"
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
             animate={loaded ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.8, delay: shouldReduceMotion ? 0 : 0.2 }}
           >
             <p className="font-heading text-xl font-bold tracking-tight">DevFolio.</p>
             <nav className="hidden items-center gap-8 text-sm text-white/70 md:flex">
@@ -301,13 +335,15 @@ export default function HomePage() {
                   key={item.label}
                   href={item.href}
                   onClick={(event) => handleNavClick(event, item.href)}
+                  target={item.external ? "_blank" : undefined}
+                  rel={item.external ? "noreferrer" : undefined}
                   className={`relative transition-colors hover:text-white ${
                     activeSection === item.href.slice(1) ? "text-white" : "text-white/70"
                   }`}
-                  whileHover={{ scale: 1.05, textShadow: "0 0 14px rgba(255,255,255,0.6)" }}
+                  whileHover={shouldReduceMotion ? undefined : { scale: 1.05, textShadow: "0 0 14px rgba(255,255,255,0.6)" }}
                 >
                   {item.label}
-                  {activeSection === item.href.slice(1) && (
+                  {item.href.startsWith("#") && activeSection === item.href.slice(1) && (
                     <motion.span
                       layoutId="activeNav"
                       className="absolute -bottom-2 left-0 h-px w-full bg-white/80 shadow-[0_0_12px_rgba(255,255,255,0.7)]"
@@ -316,19 +352,62 @@ export default function HomePage() {
                 </motion.a>
               ))}
             </nav>
+            <button
+              type="button"
+              aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-navigation"
+              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+              className="premium-button-ghost inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.04] md:hidden"
+            >
+              <span className="sr-only">{isMobileMenuOpen ? "Close menu" : "Open menu"}</span>
+              <span className="flex w-5 flex-col gap-1.5">
+                <span className={`h-px w-full bg-white transition ${isMobileMenuOpen ? "translate-y-2 rotate-45" : ""}`} />
+                <span className={`h-px w-full bg-white transition ${isMobileMenuOpen ? "opacity-0" : "opacity-80"}`} />
+                <span className={`h-px w-full bg-white transition ${isMobileMenuOpen ? "-translate-y-2 -rotate-45" : ""}`} />
+              </span>
+            </button>
           </motion.header>
+
+          <AnimatePresence>
+            {isMobileMenuOpen && (
+              <motion.div
+                id="mobile-navigation"
+                className="fixed inset-x-4 top-20 z-40 rounded-3xl border border-white/15 bg-[#080b12]/95 p-4 shadow-hero backdrop-blur-xl md:hidden"
+                initial={shouldReduceMotion ? false : { opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+              >
+                <nav className="grid gap-2" aria-label="Mobile navigation">
+                  {navItems.map((item) => (
+                    <a
+                      key={`mobile-${item.label}`}
+                      href={item.href}
+                      target={item.external ? "_blank" : undefined}
+                      rel={item.external ? "noreferrer" : undefined}
+                      onClick={(event) => handleNavClick(event, item.href)}
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/85 transition hover:border-white/30 hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200"
+                    >
+                      {item.label}
+                    </a>
+                  ))}
+                </nav>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="mt-14 grid flex-1 items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
             <motion.div
-              initial={{ opacity: 0, y: 32 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 32 }}
               animate={loaded ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.9, delay: 0.35 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.9, delay: shouldReduceMotion ? 0 : 0.35 }}
             >
               <motion.p
                 className="text-sm uppercase tracking-[0.34em] text-white/55"
-                initial={{ opacity: 0, y: 12 }}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
                 animate={loaded ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.45, delay: 0.42 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.45, delay: shouldReduceMotion ? 0 : 0.42 }}
               >
                 {scrambleText}
               </motion.p>
@@ -351,16 +430,16 @@ export default function HomePage() {
                 <motion.a
                   href="#portfolio"
                   className="premium-button rounded-full bg-white px-7 py-3 font-heading text-sm font-semibold text-black transition"
-                  whileHover={{ scale: 1.04, boxShadow: "0 0 30px rgba(255,255,255,0.32), 0 10px 24px rgba(0,0,0,0.35)" }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={shouldReduceMotion ? undefined : { scale: 1.04, boxShadow: "0 0 30px rgba(255,255,255,0.32), 0 10px 24px rgba(0,0,0,0.35)" }}
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                 >
                   View Projects
                 </motion.a>
                 <motion.a
                   href="#contact"
                   className="premium-button-ghost rounded-full bg-white/5 px-7 py-3 font-heading text-sm font-semibold text-white backdrop-blur-sm transition"
-                  whileHover={{ scale: 1.04, boxShadow: "0 0 26px rgba(255,255,255,0.18), 0 10px 24px rgba(0,0,0,0.35)" }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={shouldReduceMotion ? undefined : { scale: 1.04, boxShadow: "0 0 26px rgba(255,255,255,0.18), 0 10px 24px rgba(0,0,0,0.35)" }}
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                 >
                   Contact Me
                 </motion.a>
@@ -397,9 +476,9 @@ export default function HomePage() {
 
             <motion.div
               className="mx-auto w-full max-w-md"
-              initial={{ opacity: 0, y: 48 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 48 }}
               animate={loaded ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.95, delay: 0.45 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.95, delay: shouldReduceMotion ? 0 : 0.45 }}
             >
               <article className="premium-panel relative overflow-hidden rounded-[28px] p-4 shadow-hero">
                 <div className="relative overflow-hidden rounded-2xl">
@@ -434,11 +513,8 @@ export default function HomePage() {
 
           <motion.section
             id="about"
-            className="premium-panel hud-shell mt-8 rounded-3xl p-6 sm:p-8"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.25 }}
-            transition={{ duration: scrollDirection === "down" ? 0.7 : 0 }}
+            className="premium-panel content-panel hud-shell mt-8 rounded-3xl p-6 sm:p-8"
+            {...sectionMotion}
           >
             <div className="hud-corners" />
             <div className="grid items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
@@ -455,7 +531,7 @@ export default function HomePage() {
               </div>
 
               <div>
-                <p className="hud-label">Profile Node</p>
+                <p className="hud-label">About</p>
                 <h2 className="mt-3 max-w-2xl font-heading text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
                   Full Stack Web Developer
                 </h2>
@@ -492,15 +568,12 @@ export default function HomePage() {
 
           <motion.section
             id="portfolio"
-            className="premium-panel hud-shell mt-8 rounded-3xl p-6 sm:p-8"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
-            transition={{ duration: scrollDirection === "down" ? 0.7 : 0 }}
+            className="premium-panel content-panel hud-shell mt-8 rounded-3xl p-6 sm:p-8"
+            {...sectionMotion}
           >
             <div className="hud-corners" />
             <div className="mx-auto max-w-3xl text-center">
-              <p className="hud-label justify-center">Project Index</p>
+              <p className="hud-label justify-center">Projects</p>
               <h2 className="mt-3 font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">
                 Portfolio Showcase
               </h2>
@@ -579,9 +652,8 @@ export default function HomePage() {
                     {displayedProjects.map((item) => (
                       <article
                         key={item.title}
-                        className="group premium-panel hud-shell overflow-hidden rounded-2xl transition duration-300 hover:-translate-y-1.5 hover:border-white/35 hover:shadow-[0_20px_36px_rgba(0,0,0,0.42),0_0_34px_rgba(255,255,255,0.16)]"
+                        className="group premium-panel project-card hud-shell overflow-hidden rounded-2xl transition duration-300 hover:-translate-y-1 hover:border-white/30 hover:shadow-[0_18px_32px_rgba(0,0,0,0.38),0_0_24px_rgba(255,255,255,0.1)]"
                       >
-                        <div className="hud-corners !inset-3" />
                         <div className="relative h-48 overflow-hidden">
                           <Image
                             src={item.image}
@@ -600,23 +672,31 @@ export default function HomePage() {
                             <span className="h-1 w-1 rounded-full bg-white/35" />
                             <span>{item.status}</span>
                           </div>
-                          <div className="mb-3 h-1 overflow-hidden rounded-full bg-white/10">
-                            <motion.div
-                              className="h-full rounded-full bg-gradient-to-r from-cyan-200 to-white"
-                              initial={{ width: "20%" }}
-                              whileInView={{ width: item.status === "Live" ? "100%" : "72%" }}
-                              viewport={{ once: true, amount: 0.5 }}
-                              transition={{ duration: 0.8, ease: "easeOut" }}
-                            />
-                          </div>
                           <h3 className="font-heading text-lg font-semibold text-white">{item.title}</h3>
-                          <p className="mt-2 text-sm leading-relaxed text-white/65">{item.summary}</p>
+                          <p className="mt-2 text-sm leading-relaxed text-white/72">{item.summary}</p>
+                          <div className="mt-4 space-y-3">
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Problem</p>
+                              <p className="mt-1 text-xs leading-relaxed text-white/62">{item.problem}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Impact</p>
+                              <p className="mt-1 text-xs leading-relaxed text-white/62">{item.impact[0]}</p>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {item.technologies.slice(0, 4).map((tech) => (
+                                <span key={tech} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/68">
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                           <Link
                             prefetch
                             href={`/projects/${item.slug}`}
                             className="premium-button-ghost mt-4 inline-flex rounded-full px-4 py-2 text-xs font-semibold text-white transition hover:border-white/45 hover:shadow-[0_0_24px_rgba(255,255,255,0.18)]"
                           >
-                            View Details
+                            View Case Study
                           </Link>
                         </div>
                       </article>
@@ -728,17 +808,14 @@ export default function HomePage() {
 
           <motion.section
             id="contact"
-            className="premium-panel hud-shell mt-8 rounded-3xl p-6 sm:p-8"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
-            transition={{ duration: scrollDirection === "down" ? 0.7 : 0 }}
+            className="premium-panel content-panel hud-shell mt-8 rounded-3xl p-6 sm:p-8"
+            {...sectionMotion}
           >
             <div className="hud-corners" />
             <div className="grid items-start gap-8 lg:grid-cols-[0.95fr_1.05fr]">
               <div className="space-y-6">
                 <div>
-                  <p className="hud-label">Contact Channel</p>
+                  <p className="hud-label">Contact</p>
                   <h2 className="mt-3 font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">
                     Let&apos;s work together!
                   </h2>
@@ -790,43 +867,68 @@ export default function HomePage() {
                     type="text"
                     tabIndex={-1}
                     autoComplete="off"
+                    name="website"
                     value={formData.website}
                     onChange={(event) => setFormData((prev) => ({ ...prev, website: event.target.value }))}
                     className="hidden"
                     aria-hidden="true"
                   />
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
-                    placeholder="Your Name"
-                    className="premium-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition"
-                  />
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))}
-                    placeholder="Your Email"
-                    className="premium-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition"
-                  />
-                  <input
-                    type="text"
-                    required
-                    value={formData.subject}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, subject: event.target.value }))}
-                    placeholder="Subject"
-                    className="premium-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition"
-                  />
-                  <textarea
-                    required
-                    rows={6}
-                    value={formData.message}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, message: event.target.value }))}
-                    placeholder="Your Message"
-                    className="premium-input w-full resize-none rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/45 outline-none transition"
-                  />
+                  <div>
+                    <label htmlFor="contact-name" className="field-label">Name</label>
+                    <input
+                      id="contact-name"
+                      name="name"
+                      type="text"
+                      required
+                      autoComplete="name"
+                      value={formData.name}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
+                      placeholder="Your name"
+                      className="premium-input mt-2 w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/38 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="contact-email" className="field-label">Email</label>
+                    <input
+                      id="contact-email"
+                      name="email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={formData.email}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))}
+                      placeholder="you@example.com"
+                      className="premium-input mt-2 w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/38 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="contact-subject" className="field-label">Subject</label>
+                    <input
+                      id="contact-subject"
+                      name="subject"
+                      type="text"
+                      required
+                      autoComplete="off"
+                      value={formData.subject}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, subject: event.target.value }))}
+                      placeholder="Project inquiry, collaboration, or opportunity"
+                      className="premium-input mt-2 w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/38 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="contact-message" className="field-label">Message</label>
+                    <textarea
+                      id="contact-message"
+                      name="message"
+                      required
+                      rows={6}
+                      autoComplete="off"
+                      value={formData.message}
+                      onChange={(event) => setFormData((prev) => ({ ...prev, message: event.target.value }))}
+                      placeholder="Tell me about the project, role, or problem you want to solve."
+                      className="premium-input mt-2 w-full resize-none rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/38 outline-none transition"
+                    />
+                  </div>
 
                   <div className="flex flex-col items-start gap-3">
                     <button
@@ -837,8 +939,8 @@ export default function HomePage() {
                       {isSubmitting ? "Sending..." : "Send Message"}
                     </button>
 
-                    {formStatus === "success" && (<p className="text-sm text-emerald-300">{formFeedback}</p>)}
-                    {formStatus === "error" && (<p className="text-sm text-rose-300">{formFeedback}</p>)}
+                    {formStatus === "success" && (<p className="text-sm text-emerald-300" role="status">{formFeedback}</p>)}
+                    {formStatus === "error" && (<p className="text-sm text-rose-300" role="alert">{formFeedback}</p>)}
                   </div>
                 </div>
               </form>

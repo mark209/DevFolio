@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 type BackgroundMode = "particles" | "wave";
@@ -121,11 +121,35 @@ function WaveField() {
 
 type SceneBackgroundProps = {
   mode: BackgroundMode;
+  reduceMotion?: boolean;
 };
 
-export function SceneBackground({ mode }: SceneBackgroundProps) {
+export function SceneBackground({ mode, reduceMotion = false }: SceneBackgroundProps) {
+  const [useStaticBackdrop, setUseStaticBackdrop] = useState(reduceMotion);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 640px)");
+    const update = () => setUseStaticBackdrop(reduceMotion || query.matches);
+
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, [reduceMotion]);
+
+  if (useStaticBackdrop) {
+    return (
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 opacity-70"
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(49,92,236,0.28),transparent_42%),radial-gradient(circle_at_86%_12%,rgba(126,55,204,0.18),transparent_38%)]" />
+        <div className="ambient-grid absolute inset-0 opacity-20" />
+      </div>
+    );
+  }
+
   return (
-    <div className="pointer-events-none fixed inset-0 z-0 opacity-70">
+    <div className="pointer-events-none fixed inset-0 z-0 opacity-70" aria-hidden="true">
       <Canvas camera={{ position: [0, 0, 6], fov: 65 }}>
         <ambientLight intensity={0.35} />
         {mode === "particles" ? <ParticleCloud /> : <WaveField />}

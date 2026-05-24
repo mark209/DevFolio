@@ -4,17 +4,21 @@ import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-inter"
+  variable: "--font-inter",
+  display: "swap",
+  fallback: ["Arial", "Helvetica", "sans-serif"]
 });
 
 const montserrat = Montserrat({
   subsets: ["latin"],
-  variable: "--font-montserrat"
+  variable: "--font-montserrat",
+  display: "swap",
+  fallback: ["Arial", "Helvetica", "sans-serif"]
 });
 
 export const metadata: Metadata = {
-  title: "EJ | Creative Technologist",
-  description: "Modern portfolio landing page with interactive 3D background."
+  title: "Creative Technologist: EJ",
+  description: "Portfolio of Elijah James Cubing, building scalable, user-focused digital platforms."
 };
 
 export default function RootLayout({

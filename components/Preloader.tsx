@@ -7,7 +7,7 @@ type PreloaderProps = {
   onComplete: () => void;
 };
 
-const loaderLines = ["Initializing DevFolio interface", "Loading project systems", "Preparing portfolio experience"];
+const loaderLines = ["Initializing DevFolio", "Loading projects", "Opening portfolio"];
 const bootSteps = ["Profile", "Projects", "Stack", "Contact"];
 
 export function Preloader({ onComplete }: PreloaderProps) {
@@ -22,13 +22,13 @@ export function Preloader({ onComplete }: PreloaderProps) {
 
   useEffect(() => {
     if (lineIndex >= loaderLines.length) {
-      const closeTimer = setTimeout(() => setHideLoader(true), 700);
+      const closeTimer = setTimeout(() => setHideLoader(true), 320);
       return () => clearTimeout(closeTimer);
     }
 
     const currentLine = loaderLines[lineIndex];
     if (charIndex < currentLine.length) {
-      const typingTimer = setTimeout(() => setCharIndex((prev) => prev + 1), 38);
+      const typingTimer = setTimeout(() => setCharIndex((prev) => prev + 1), 16);
       return () => clearTimeout(typingTimer);
     }
 
@@ -36,7 +36,7 @@ export function Preloader({ onComplete }: PreloaderProps) {
       setDisplayedLines((prev) => [...prev, currentLine]);
       setLineIndex((prev) => prev + 1);
       setCharIndex(0);
-    }, 260);
+    }, 100);
 
     return () => clearTimeout(pauseTimer);
   }, [charIndex, lineIndex]);
@@ -45,9 +45,13 @@ export function Preloader({ onComplete }: PreloaderProps) {
     if (!hideLoader) {
       return;
     }
-    const timeout = setTimeout(() => onComplete(), 850);
+    const timeout = setTimeout(() => onComplete(), 280);
     return () => clearTimeout(timeout);
   }, [hideLoader, onComplete]);
+
+  const handleSkip = () => {
+    setHideLoader(true);
+  };
 
   return (
     <AnimatePresence>
@@ -115,7 +119,16 @@ export function Preloader({ onComplete }: PreloaderProps) {
             </div>
 
             <div className="mx-auto mt-7 max-w-xl">
-              <p className="text-xs uppercase tracking-[0.34em] text-white/45">Boot Sequence</p>
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-xs uppercase tracking-[0.34em] text-white/45">Boot Sequence</p>
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/65 transition hover:border-white/35 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200"
+                >
+                  Skip
+                </button>
+              </div>
               <div className="mt-4 min-h-[92px] rounded-2xl border border-white/10 bg-black/25 p-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                 {displayedLines.map((line) => (
                   <p key={line} className="font-mono text-sm leading-7 text-white/58">
